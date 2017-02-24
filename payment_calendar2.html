@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+Ian's payment calendar 3.8 javascript page vers 3.8
+</title>
+<script src= "payment_calender_cycle_dat1.js"></script>
+<script src= "payment_cycle_dat_demo1.js"></script>
+<script src="orgsite.js"> </script>
+<!--
+/*
+
+COPYRIGHT NOTICE.
+
+Ian's Beta payment calendar 3.8 javascript page vers 3.8
+This copyright notice  applies to this file and the associated files with a copyright notice in them.
+
+This is a beta version of a javascript Payment Calendar Program
+It is not 100% fully functional,and is in development.
+
+It contains (together with the associated files ) 
+fully functional date routines working from the number of 
+days since the 1st of Januray in the origin year,
+currently set to 1964.
+
+Setting total Months.
+The routines than calculate and set total months
+may not be 100% reliable.
+In particular if you set the total month value to
+be an effective month within the implicit year which doesn't allow the
+specified day number (that's the day of the month) for that month
+then it will report an error.
+
+Eg if it implied February, but the day number was 30.
+
+** THE POINT OF REGISTERING THIS CODE  ON GITHUB IS TO COPYRIGHT THE DATE ROUTINES ****
+
+COPYRIGHT NOTICE.
+
+This code is copyright  (C)  by Ian Pouncy 24/2/17,
+
+under the   GNU GENERAL PUBLIC LICENSE,  Version 3, 29 June 2007 , see Free Software Foundation, Inc. <http://fsf.org/> 
+
+ This means you can use it if you want under the terms of that licence.
+
+This source code  has been registered on github (user name Ianp44) on 24/2/17.
+
+*/
+
+-->
+
+
+<script>
+// this version has routines using intrinsic Javascript dates removed.
+
+
+var count;
+var glob_total;
+var glob_total_day;
+
+var glob_calc_sw;
+var trigger_sw;
+
+var zinit_date_str;
+var zinit_date;
+var zinit_cash_value;
+var zcurrent_date;
+var zcurrent_msecs;
+
+var znum_days;
+var zwk_day;
+var znum_weeks;
+var znum_months;
+var zrunning_total;
+//=============
+
+// cycle payment data variables
+
+
+//var cycle_dat_ar;
+//var cycle_dat_ar_top;
+//var cycle_trigger_ar;
+
+//===
+//zdate variables
+
+var origin_year=1964;
+var zyearblock;
+var wkday_offset=0;
+var zord_months;
+var zleap_yr_months;
+var zmonth_names;
+
+var glob_ztest_failed;
+var glob_zdate1;
+var glob_zdate2;
+
+
+function zdate_init(){
+	zyearblock=(365*3)+366;
+	zmonth_names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+	
+//zord_months=[31,28,31,30,31,30,31,31,30,31,30,31];
+zord_months=[31,28,31,30,31,30,31,31,30,31,30,31,40];
+//zleap_yr_months=[31,29,31,30,31,30,31,31,30,31,30,31];
+zleap_yr_months=[31,29,31,30,31,30,31,31,30,31,30,31,40];
+	
+	
+	
+}
+
+
+function tst_disp(){
+var txt;
+txt='hello<br>\n';
+document.getElementById("id1").innerHTML=txt;
+	
+}
+
+function check_isnotnan(lnum,lmsg)
+{
+var lnum2;
+lnum2=lnum;
+if(isNaN(lnum2))
+{
+rerror(lmsg+ "is not a number:");	
+}
+}
+
+function zdates_error(msg){
+rerror("zdates  error: "+msg);	
+	
+	
+}
+
+function zdates_user_error(msg){
+rerror("zdates user error: "+msg);	
+	
+}
+
+function zdates_sys_error(msg){
+rerror("zdates system error: "+msg);	
+	
+}
+
+function sub_month_days(zdate,month_ar,lyear_days){
+var x;
+var xlen;
+var ldays;
+var mnthday;
+var leftdays;
+xlen=month_ar.length;
+/*
+if(xlen!=12){
+zdates_sys_error("month array wrong length in sub_month_days "	);
+}
+*/
+ldays=lyear_days;
+x=0;
+while(x<xlen){
+leftdays=ldays-month_ar[x];
+if(leftdays<0){
+zdate.zday=ldays+1;
+zdate.zmonth=x+1;
+return;
+}
+ldays=leftdays;
+
+x++;	
+}
+	
+zdates_sys_error("too many days in lyear_days in sub_month_days");	
+	
+}
+
+function calc_month_days(month_ar,lmonth){
+var x;
+var xlen;
+var ldays;
+//var mnthday;
+//var leftdays;
+var xlim;
+xlen=month_ar.length;
+/*
+if(xlen!=12){
+zdates_sys_error("month array wrong length in sub_month_days "	);
+}
+*/
+ldays=0;
+x=0;
+xlim=lmonth-1;
+while(x<xlim){
+	if(x>=xlen){
+	zdates_sys_error("lmonth  > month array length in calc_month_days "	);
+		
+	}
+	ldays+=month_ar[x];
+
+x++;	
+}
+return(ldays);	
+	
+}
+
+function zcopy_zdate(dest,src){
+
+dest.ztot_days=src.ztot_days;
+dest.z_isleapyr=src.z_isleapyr;
+dest.tot_months=src.tot_months;
+dest.wkdaynm=src.wkdaynm;
+dest.zyear=src.zyear;
+dest.zday=src.zday;
+dest.zmonth=src.zmonth;
+	
+	
+}
+
+function set_zdate_totmonths(zdate,ltotmonths){
+var lzyears;
+var lzmonths;
+var res_date2;
+if(ltotmonths<0){
+zdates_sys_error('ltotmonths<0 in set_zdate_totmonths');
+}
+
+zdate.tot_months=ltotmonths;	
+lzyears=Math.ceil((ltotmonths+1)/12)-1;
+lzmonths=ltotmonths-(lzyears*12);
+zdate.zyear=lzyears;
+zdate.zmonth=lzmonths+1;
+res_date2=calculate_days_from_zdate(zdate);
+return(res_date2);
+
+}
+
+
+
+function calculate_totmonths_from_zdate(zdate){
+var ltotmonths;
+ltotmonths=zdate.zyear*12;
+ltotmonths+=zdate.zmonth-1;
+zdate.tot_months=ltotmonths;
+
+}
+
+
+function calculate_days_from_zdate(zdate){
+var ltotdays;
+var num_blockyrs;
+var zsubyear;
+var l_isleap;
+var zsub_year_days;
+var zsub_year_days2;
+var lyear;
+var lmonth_ar;
+var zyear_days;
+var ldays;
+var lmonthdays;
+var lmonth;
+var month_days;
+var lzdate;
+
+lyear=zdate.zyear;
+if(lyear<origin_year){
+zdates_error("year is < zdate origin_year");
+
+}
+
+
+
+lzdate=new create_zdate();
+zcopy_zdate(lzdate,zdate);
+
+lyear-=origin_year;
+num_blockyrs=Math.ceil((lyear+1)/4)-1;
+zsubyear=lyear-(num_blockyrs*4);
+l_isleap=false;
+if(zsubyear==0){
+l_isleap=true;
+	
+}
+lmonth=zdate.zmonth;
+
+if((lmonth<1)||(lmonth>12)){
+zdates_error("illegal value:month  is <1 or >12");	
+}
+
+lmonth_ar=zord_months;
+if(l_isleap){
+lmonth_ar=zleap_yr_months;
+	
+}
+
+lmonthdays=calc_month_days(lmonth_ar,lmonth);
+
+ldays=zdate.zday;
+if(ldays<1){
+zdates_error("illegal value:day  is <1");	
+	
+}
+
+if(ldays>lmonth_ar[lmonth-1]){
+zdates_error("illegal value:day  too large for specified month");	
+	
+}
+
+ltotdays=(num_blockyrs*zyearblock);
+if(!l_isleap){
+ltotdays+=	(zsubyear*365)+1;
+}
+lzdate.z_isleapyr=l_isleap;
+
+ltotdays+=lmonthdays;
+ltotdays+=ldays-1;
+lzdate.ztot_days=ltotdays;
+return(lzdate);
+	
+	
+	
+}
+
+
+function calculate_zdate_from_days(zdate){
+var ltotdays;
+var num_blockyrs;
+var zsubyear;
+var l_isleap;
+var zsub_year_days;
+var zsub_year_days2;
+var lyear;
+var lmonth_ar;
+var zyear_days;
+ltotdays=zdate.ztot_days;
+num_blockyrs=Math.ceil((ltotdays+1)/zyearblock)-1;
+zsub_year_days=ltotdays-(num_blockyrs*zyearblock);
+
+l_isleap=false;
+if(zsub_year_days<366){
+l_isleap=true;
+zsubyear=0;
+zyear_days=	zsub_year_days;
+//rerror("test break1");
+}else{
+zsub_year_days2=zsub_year_days-1;	
+//zsubyear=Math.ceil(	zsub_year_days2/365);
+zsubyear=Math.ceil(	(zsub_year_days2+1)/365)-1;
+zyear_days=zsub_year_days2-(zsubyear*365);
+//rerror("test break2");
+}
+lyear=(num_blockyrs*4)+zsubyear;
+zdate.z_isleapyr=l_isleap;
+zdate.zyear=lyear+origin_year;
+
+//got year and year days
+//do months;
+
+lmonth_ar=zord_months;
+if(l_isleap){
+lmonth_ar=zleap_yr_months;
+	
+}
+sub_month_days(zdate,lmonth_ar, zyear_days);
+/*if(zdate.zmonth==13){
+rerror("break3"	);
+}
+*/
+}
+
+
+function get_zdate_str(zdate){
+var txt;
+txt='';
+
+txt+=zdate.zday;
+txt+='/';
+txt+=zdate.zmonth;
+txt+='/';
+txt+=zdate.zyear;
+return(txt);
+
+	
+	
+}
+
+function get_start_tot_value(){
+var dtxt;
+var loc_val;
+	
+dtxt=document.forms["date_form"]["zstart_tot_val"].value;
+
+loc_val=1.0*dtxt;
+	check_isnotnan(loc_val,"Start Total Value ");
+global_payment_total=loc_val;
+	
+}
+//format is dd/mm/yr
+function create_zdate_fstr(dstr,sw){
+	var date_ar;
+	var txt;
+	var lday;
+	var lmonth;
+	var lyear;
+	var ldate;
+	var ldate2;
+	var lzdate;
+	var lzdate2;
+	txt='';
+	date_ar=dstr.split('/');
+	if(date_ar.length!=3){
+		//#?bug alert
+	rerror("date string has incorrect number of fields"	);
+	}
+	lday=1.0*date_ar[0];
+	check_isnotnan(lday,"day text date field ");
+	
+	lmonth=1.0*date_ar[1];
+	
+	check_isnotnan(lmonth,"month text date field ");
+	lyear=1.0*date_ar[2];
+	check_isnotnan(lyear,"year text date field ");
+	
+	
+	if(sw==1){
+txt+='zDate Test:<br>\n';
+txt+=dstr;
+	txt+='<br>\n';
+	
+	txt+='day:'+lday;
+	txt+=',';
+	txt+='month:'+lmonth;
+	',';
+	txt+='year:'+lyear;
+	txt+='<br>\n';
+	
+	}
+	
+	
+	if(lyear<100){
+		lyear+=2000;
+	}
+	lzdate= new create_zdate();
+	
+	lzdate.zyear=lyear;
+	lzdate.zmonth=lmonth;
+	lzdate.zday=lday;
+	
+	lzdate2=calculate_days_from_zdate(lzdate);
+	if(sw==1){
+	txt+=	get_zdate_str(lzdate2);
+	
+	txt+='<br>\n';
+	
+document.getElementById("id0_1").innerHTML=txt;
+	}
+return(lzdate2);
+	
+}
+
+
+function test_date(){
+var dtxt;
+var lzdate;
+//try {	
+
+dtxt=document.forms["date_form"]["initialdate"].value;
+
+//ldate=create_date(dtxt);
+//return(ldate);
+
+
+lzdate=create_zdate_fstr(dtxt,1);
+return(lzdate);
+//document.getElementById("id1").innerHTML='hello<br>\n';
+
+//}
+
+/*
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+
+
+
+}
+*/
+
+}
+
+
+
+function do_cell_entry3(zdate){
+	var txt;
+	var txt2;
+	var lzdate;
+	var ltotdays;
+	var ltotdays2;
+	var ztot_months;
+	var lzdate2;
+	var 	res_date2;
+	
+	txt='';
+	//txt+='Hello<br>\n';
+	txt2=get_zdate_str(zdate);
+	/*
+		calculate_totmonths_from_zdate(zdate);
+
+	ztot_months=zdate.tot_months;
+	lzdate2=new create_zdate();
+	zcopy_zdate(lzdate2,zdate);
+
+res_date2=set_zdate_totmonths(lzdate2,ztot_months);
+
+
+	txt2+='<br>\n';
+	*/
+	
+	//txt2+='zm:'+ztot_months+'<br>\n';
+	//txt2+='dat2:'+get_zdate_str(res_date2);
+//	txt2+='dat2:'+get_zdate_str(lzdate2);
+	txt2+='<br>\n';
+	
+	
+	txt+='<span style="color:'+	'black'+';">';
+
+
+
+txt+=txt2;
+txt+='</span>';	
+txt+='<br>\n';
+
+
+if(glob_calc_sw){
+	txt+=do_trig_days(zdate);
+}
+	ltotdays=zdate.ztot_days;
+	lzdate=calculate_days_from_zdate(zdate);	
+//	lzdate.ztot_days+=1;
+	ltotdays2=lzdate.ztot_days;
+	if(ltotdays!=ltotdays2){
+		glob_ztest_failed=true;
+	txt+='<br>\n';
+	txt+='Error<br>';
+		
+		
+	}
+//		txt+='OK<br>';
+
+	return(txt);
+}
+
+function do_cell_entry(zdate){
+	var txt;
+	var lzdate;
+	var ltotdays;
+	var ltotdays2;
+	txt='';
+	
+	txt+=get_zdate_str(zdate);
+	txt+='<br>\n';
+	ltotdays=zdate.ztot_days;
+	lzdate=calculate_days_from_zdate(zdate);	
+//	lzdate.ztot_days+=1;
+	ltotdays2=lzdate.ztot_days;
+	if(ltotdays!=ltotdays2){
+		glob_ztest_failed=true;
+	txt+='<br>\n';
+	txt+='Error<br>';
+		
+		
+	}
+		txt+='OK<br>';
+
+	return(txt);
+}
+
+
+
+
+function disp_weeks2(zdate,n_wks,sw){
+var txt;
+var txt2;
+var zweeks;
+var txt3;
+var zdays;
+var ldate2;
+var zdays2;
+var ldays;
+var monthsw;
+var lastmnth;
+
+txt='';
+zweeks=0;
+
+ldays=zdate.ztot_days;
+calculate_zdate_from_days(zdate);
+lastmnth=zdate.zmonth;
+monthsw=0;
+
+txt3='';
+txt3+=theader();	
+while(zweeks<n_wks){
+zdays=0;
+txt2='';
+
+while(zdays<7){
+	zdays2=zdays+(zweeks*7);
+	//zdate2=zadd_days(zdays2,ldate);
+	zdate.ztot_days=ldays+zdays2;
+	if(sw==1){
+	if(	zdate.ztot_days==	glob_zdate1.ztot_days){
+	initialise_calc(sw);
+	}
+	
+	}
+	calculate_zdate_from_days(zdate);
+//txt2+=tcell(do_celldata(ldate2));
+
+if(lastmnth!=zdate.zmonth){
+if(monthsw==0){
+monthsw=1;	
+}else{
+monthsw=0;	
+}
+lastmnth=zdate.zmonth;
+
+}
+
+//txt2+=tcell2(monthsw,get_zdate_str(zdate));
+if(sw==0){
+txt2+=tcell2(monthsw,do_cell_entry(zdate));
+}else if(sw==1){
+txt2+=tcell3(monthsw,do_cell_entry3(zdate));
+	
+	
+}
+zdays++;	
+}
+txt3+=trow(txt2);	
+	
+zweeks++;
+	
+}
+txt3+=tfooter();
+return(txt3);
+	
+	
+}
+
+
+
+
+function create_zdate(){
+this.ztot_days=0;
+this.z_isleapyr=true;
+this.tot_months=0
+this.wkdaynm=0;
+this.zyear=0;
+this.zday=1;
+this.zmonth=1;
+return (this);	
+	
+}
+
+
+
+
+
+
+
+function theader(){
+var txt;
+txt="";
+txt+='<table width="700" cellspacing="0" cellpadding="0"';
+txt+=' border="1" bcolor=#000 >\n';
+return(txt);
+}
+
+function trow(ltxt){
+var txt;
+txt="";
+txt+='<tr>';
+txt+=ltxt;
+txt+='</tr>\n';
+return(txt);
+}
+
+
+function tcell2(monthsw,ltxt){
+var txt;
+var classstr;
+
+txt="";
+classstr="td_date_class1";
+if(monthsw==1){
+classstr="td_date_class2";
+}
+
+txt+='<td class="'+classstr+'">';
+txt+=ltxt;
+txt+='</td>';
+return(txt);
+}
+
+function tcell3(monthsw,ltxt){
+var txt;
+var classstr;
+
+txt="";
+//classstr="td_date_class1_3";
+classstr="td_date_class2_3";
+if(monthsw==1){
+//classstr="td_date_class2_3";
+classstr="td_date_class1_3";
+}
+
+txt+='<td class="'+classstr+'">';
+txt+=ltxt;
+txt+='</td>';
+return(txt);
+}
+
+
+function tcell(ltxt){
+var txt;
+txt="";
+txt+='<td>';
+txt+=ltxt;
+txt+='</td>';
+return(txt);
+}
+
+function tbold4(ltxt){
+var txt;
+txt="";
+txt+='<b>';
+txt+=ltxt;
+txt+='</b>';
+return(txt);
+}
+
+function tfooter(){
+var txt;
+txt="";
+txt+='</table>\n';
+return(txt);
+}
+
+
+function rerror(txt){
+throw(txt);
+
+}
+
+
+function z2init(){
+try {
+zdate_init();
+init_payment_cycle_data();
+document.getElementById("id1").innerHTML='';
+
+//doitall();
+}
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+
+
+
+}
+
+
+
+
+}
+
+
+
+
+function get_date_pair(){
+var dtxt;
+	
+	dtxt=document.forms["date_form"]["initialdate"].value;
+
+//ldate=create_date(dtxt);
+//return(ldate);
+
+
+glob_zdate1=create_zdate_fstr(dtxt,0);
+dtxt=document.forms["date_form"]["end_date"].value;
+
+glob_zdate2=create_zdate_fstr(dtxt,0);
+
+
+	
+	
+}
+
+
+function dodates4(){
+	var txt;
+	var ldate;
+	var lzdate2;
+var zdate;
+var testdays;
+var date_dif;
+var weekdif;
+var remdays;
+try {
+	txt='';
+	get_date_pair();
+txt+='Caclculating Interval Between Dates:<br>\n';
+txt+=	get_zdate_str(glob_zdate1);
+txt+=' and:<br>\n';
+txt+=	get_zdate_str(glob_zdate2);
+txt+='<br>\n';
+txt+='<br>\n';
+
+date_dif=glob_zdate2.ztot_days-glob_zdate1.ztot_days;
+txt+='Interval:'+date_dif;
+txt+=' days<br>\n';
+weekdif=Math.ceil((date_dif+1)/7)-1;
+remdays=date_dif-(weekdif*7);
+txt+='Interval:'+weekdif+' weeks, '+remdays+' days';
+txt+='<br>\n';
+
+
+document.getElementById("id0_1").innerHTML=txt;
+
+
+}
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function dozcalendar(){
+	var txt;
+	var ldate;
+	var lzdate2;
+	var lzdate1;
+	var lzdate2;
+var zdate;
+var testdays;
+try {
+	txt='';
+	get_date_pair();
+	glob_ztest_failed=false;
+	
+//date_dif=glob_zdate2.ztot_days-glob_zdate1.ztot_days;
+
+
+
+/*	
+ldate=test_date();
+*/
+//lzdate2=test_date();
+
+zdate=new 	create_zdate();
+//testdays=(7*4)*zyearblock;
+testdays=(((1988-1964)/4))*zyearblock;
+
+zdate.ztot_days=testdays;
+
+txt+=disp_weeks2(zdate,56*4,0);
+if(!glob_ztest_failed){
+txt+='Global Test Suceeded<br>\n';	
+}else {
+txt+='Global Test Failed<br>\n';	
+	
+}
+document.getElementById("id1").innerHTML=txt;
+
+
+}
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+
+
+
+}
+	
+	
+	
+}
+
+function initialise_calc(sw){
+glob_calc_sw=true;
+trigger_sw=true;
+
+/*
+if(sw==1){
+global_payment_total=172;	
+//global_payment_total=1000;
+	
+}
+*/
+
+	
+	
+}
+
+
+function dozcalendar2(sw){
+	var txt;
+	var ldate;
+	var lzdate2;
+	var lzdate1;
+	var lzdate2;
+	var date_dif;
+		
+var zdate;
+var nweeks;
+
+var testdays;
+var testdays2;
+try {
+	txt='';
+	trigger_sw=false;
+	if(sw==1){
+	init_payment_cycle_data();
+	}
+	
+	get_date_pair();
+	glob_ztest_failed=false;
+	get_date_pair();
+txt+='Displaying  Interval Between Dates:<br>\n';
+txt+=	get_zdate_str(glob_zdate1);
+txt+=' and:<br>\n';
+txt+=	get_zdate_str(glob_zdate2);
+txt+='<br>\n';
+txt+='<br>\n';
+
+date_dif=glob_zdate2.ztot_days-glob_zdate1.ztot_days;
+if(date_dif<=0){
+zdates_user_error("specifief start date is after specified end date")	
+	
+}
+glob_calc_sw=false;
+if(sw==1){
+get_start_tot_value();
+}
+/*
+if(sw==1){
+global_payment_total=172;	
+//global_payment_total=1000;
+	
+}
+*/
+
+
+zdate=new 	create_zdate();
+//testdays=(7*4)*zyearblock;
+testdays=glob_zdate1.ztot_days;
+nweeks=Math.ceil((testdays+1)/7)-1;
+testdays=nweeks*7;
+
+testdays2=glob_zdate2.ztot_days;
+nweeks=(Math.ceil((testdays2+1)/7)-1)-nweeks;
+nweeks++;
+
+document.getElementById("id0_1").innerHTML=txt;
+
+txt='';
+
+
+zdate.ztot_days=testdays;
+
+txt+=disp_weeks2(zdate,nweeks,sw);
+if(!glob_ztest_failed){
+txt+='Global Test Suceeded<br>\n';	
+}else {
+txt+='Global Test Failed<br>\n';	
+	
+}
+document.getElementById("id1").innerHTML=txt;
+
+
+}
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+
+
+
+}
+	
+	
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function dodates(){
+	var txt;
+	var ldate;
+	var lzdate2;
+var zdate;
+var testdays;
+try {
+	txt='';
+/*	
+ldate=test_date();
+*/
+lzdate2=test_date();
+
+zdate=new 	create_zdate();
+//testdays=(7*4)*zyearblock;
+testdays=(((1988-1964)/4))*zyearblock;
+
+zdate.ztot_days=testdays;
+
+txt+=disp_weeks2(zdate,56*4,0);
+if(!glob_ztest_failed){
+txt+='Global Test Suceeded<br>\n';	
+}else {
+txt+='Global Test Failed<br>\n';	
+	
+}
+document.getElementById("id1").innerHTML=txt;
+
+
+}
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+
+
+
+}
+
+}
+
+function docalendardates(){
+	var txt;
+	var ldate;
+	var lzdate2;
+var zdate;
+var testdays;
+try {
+	txt='';
+/*	
+ldate=test_date();
+*/
+lzdate2=test_date();
+
+zdate=new 	create_zdate();
+//testdays=(7*4)*zyearblock;
+testdays=(((1988-1964)/4))*zyearblock;
+
+zdate.ztot_days=testdays;
+
+txt+=disp_weeks2(zdate,56*4,0);
+if(!glob_ztest_failed){
+txt+='Global Test Suceeded<br>\n';	
+}else {
+txt+='Global Test Failed<br>\n';	
+	
+}
+document.getElementById("id1").innerHTML=txt;
+
+
+}
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+
+
+
+}
+
+}
+
+
+function zinit6(){
+zinit();
+z2init();
+
+
+}
+
+
+function dodates_zz3(){
+	var txt;
+	var ldate;
+var zdate;
+var testdays;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+try {
+	txt='';
+/*	
+ldate=test_date();
+*/
+glob_ztest_failed=false;
+zdate=new 	create_zdate();
+//testdays=(7*4)*zyearblock;
+testdays=(((1988-1964)/4))*zyearblock;
+
+zdate.ztot_days=testdays;
+
+txt+=disp_weeks2(zdate,56*4,0);
+if(!glob_ztest_failed){
+txt+='Global Test Suceeded<br>\n';	
+}else {
+txt+='Global Test Failed<br>\n';	
+	
+}
+document.getElementById("id1").innerHTML=txt;
+
+
+}
+catch(err){
+errtxt="Error:"+err+'<br>\n';
+
+document.getElementById("err_txt").innerHTML=errtxt;
+
+
+
+}
+
+}
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+
+.divclass5 {
+	font-family: "times New Roman";
+	font-size: 15pt;
+	color: #00F;
+	padding: 10px;
+	position: relative;
+	left: 40px;
+	top: 30px;
+	border: 2px solid #009;
+}
+
+.ulclass {
+	font-weight: bold;
+	color: #03C;
+	text-decoration: underline;
+}
+.blue_all {
+	font-family: "times New Roman";
+	font-size: 12pt;
+	color: #00F;
+}
+
+.td_date_class1 {
+	background-color: #F00;
+	color: #000;
+}
+
+.td_date_class2 {
+	background-color: #00F;
+	color: #000;
+}
+.td_date_class1_3 {
+//	background-color: #FF00FF;
+	background-color: #FFF;
+	//color: #000;
+	//color: #CCC;
+}
+
+.td_date_class2_3 {
+	//background-color: #FFFF00;
+	background-color: #FFFF30;
+	//color: #000;
+	//color: #999;
+}
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="orgsite.css" rel="stylesheet" type="text/css">
+
+</head>
+<body onload="zinit6()" >
+<span id="spanid">Span text</span>
+
+<!--
+<div id="maindiv" class="maindivclass">
+-->
+
+<div id="maindiv" class="divclass5">
+<span class="blue_all">
+<p>
+<!--
+<a href="../default.htm">Back to Index Page</a><br>
+  <a href="../filedump1.php?javascript/payment_calendar1.htm2" title="Link to Program Filedump">View Program Source</a><br>
+  <a href="../filedump1.php?javascript/payment_calender_cycle_dat1.js" title="Link to Javascript Include Filedump">View Javascript Include Source</a><br>
+  <a href="../filedump1.php?javascript/payment_cycle_dat_demo1.js" title="Link to Javascript Financial Cycle Data Include Filedump">View Javascript Financial Cycle Data Include Source</a><br>
+<br>
+<br>
+-->
+  
+  <a href="filedump1.php?payment_calendar2.html" title="Link to Program Filedump">View Program Source</a><br>
+  <a href="filedump1.php?payment_calender_cycle_dat1.js" title="Link to Javascript Include Filedump">View Javascript Include Source</a><br>
+  <a href="filedump1.php?payment_cycle_dat_demo1.js" title="Link to Javascript Financial Cycle Data Include Filedump">View Javascript Financial Cycle Data Include Source</a><br>
+<br>
+<br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<p class="chbluehead20">Ian's Payment Calendar vers 3.8<br>
+Javascript Beta Demo Page<br>
+ 24/2/17. Ok So Far .<br>
+ <span class="chbluehead1">(
+Version for dropdown menus.)<br><br>
+</span>
+</p>
+</span>
+<p class="blue_all">  <br>
+  <br>
+  <strong>All code Copyright (C) Ian Pouncy 24/2/17, under the GNU GENERAL PUBLIC LICENSE,  Version 3, 29 June 2007<br>
+  and the code is 
+  registered on my github account 24/2/17.<br>
+  For full copyright notice and more detail, see source code.
+  <br>
+  </strong><br>
+  This is a development program.<br>
+  <strong><br>
+    </strong>The date routines in the progam are my own (in javascript) and work with the number of days since 1st Jan in the origin year, currently set to 1964.<br>
+  (Don't ask why, that's my birth year. ) <br>
+
+  <br>
+  They can convert from day, month, year number values to and from number of days since origin year, and also to and from the number of days since<br>
+the origin year to and from a text string of form dd/mm/yy.<br>
+They allow for leapyears etc. etc. and I think are totally reliable (tested). There may be a bug to do with setting and calculating total months.<br>
+(See source code.)
+</p>
+<br>
+
+<span class="blue_all">
+<p><strong>Button Description:<br>
+  <br>
+  Click the Do Date Interval button to calculate the number of weeks and days between the Start Date and End Date<br>
+</strong></p>
+<p><b>Click the Do Calendar Between Dates  button to display a calendar between the Start Date and End Date.</b></p>
+<p><b>Click the Do Calendar Between Dates with Financial Data button to display a calendar between the Start Date and End Date,<br>
+  with the correct payments and totals (credit in green, debit in red, and total in blue) at the specified dates.</b></p>
+<p><strong>The start total value is what it calculates the total from.</strong><br>
+  <br>
+  <strong>The format of the calendar table and how the data in it is displayed could be improved.</strong></p>
+<p><strong>The payment cycles are currently defined in the progam, with a list of payment cycles having a start date,<br>
+  </strong><strong> a week, year, month or day payment cycle unit qualifier, and the period of each payment cycle period <br>
+  </strong><strong>(in the specified unit) 
+    between payments, 
+  the value of the payment, and whether it is credit or debit. </strong></p>
+<p><strong>Click the Display Payment Cycle Data to display this data. (This function could be improved.)</strong></p>
+<p></p>
+<p><b><br>
+  </b><b>Date Format is dd/mm/yyyy or dd/mm/yy</b><br>
+</p>
+<form id="date_form">
+  <b>Start Total Value:</b><input  type="text" name="zstart_tot_val"  size ="10" value="100"><br>
+  
+  <b>Start Date:</b><input  type="text" name="initialdate"  size ="30" value="20/2/17"><br>
+  <b>End Date:</b><input  type="text" name="end_date"  size ="30" value="1/8/17"><br>
+  
+  
+  
+</form>
+<br>
+<!--
+<button onclick="dodates()">Full Test</button>, 
+-->
+
+
+<button onclick="dodates4()">Do Date Interval</button>, 
+<!--
+<button onclick="dozcalendar()">Do Calendar</button>, 
+-->
+<button onclick="dozcalendar2(0)">Do Calendar Between Dates</button>, 
+<button onclick="dozcalendar2(1)">Do Calendar Between Dates with Financial Data</button>, 
+
+<button onclick="zdisplay_data()">Display Payment Cycle Data</button><br>
+
+
+
+
+
+
+
+
+
+
+
+
+<p id="err_txt">
+  Error text
+  
+</p>
+<p>
+  
+  <span id="id0_1">
+    span text
+  </span><br>
+  <br>
+  <br>
+  
+  <center>
+    
+  <span id="id1">
+    span text
+  </span>
+  </center>
+</p>
+</span>
+</div>
+
+</body>
+</html>
